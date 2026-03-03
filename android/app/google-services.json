@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "570647069916",
+    "project_id": "cuisinemenu-b9009",
+    "storage_bucket": "cuisinemenu-b9009.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:570647069916:android:f28544a0cbbf7df9732019",
+        "android_client_info": {
+          "package_name": "com.example.cuisine_menu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoTHvp-t9PwthjIK1Qs9ajCCSp95_phOw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

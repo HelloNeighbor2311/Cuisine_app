@@ -3,8 +3,9 @@ import '../models/food.dart';
 
 class FoodCard extends StatelessWidget {
   final Food food;
+  final VoidCallback? onAddToCart;
 
-  const FoodCard({super.key, required this.food});
+  const FoodCard({super.key, required this.food, this.onAddToCart});
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +53,14 @@ class FoodCard extends StatelessWidget {
             if (food.price != null) ...[
               const SizedBox(width: 8),
               Text('\$${food.price!.toStringAsFixed(2)}'),
+            ],
+            if (onAddToCart != null) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.add_shopping_cart),
+                onPressed: onAddToCart,
+                tooltip: 'Thêm vào giỏ',
+              ),
             ],
           ],
         ),

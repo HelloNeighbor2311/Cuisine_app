@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/food.dart';
 import '../services/firestore_service.dart';
 import '../widgets/food_card.dart';
+import 'cart_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,6 +14,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirestoreService _service = FirestoreService();
   List<Food> _foods = [];
+  List<Food> _cart = [];
+  String _searchQuery = '';
   bool _loading = true;
   String? _error;
   bool _simulateError = false;
@@ -30,12 +33,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
+      debugPrint('[HomeScreen] Fetching foods...');
       final list = await _service.fetchFoods(simulateError: _simulateError);
+      debugPrint('[HomeScreen] Fetched ${list.length} foods');
       setState(() {
         _foods = list;
         _loading = false;
       });
     } catch (e) {
+      debugPrint('[HomeScreen] Error loading foods: $e');
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -45,10 +51,71 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _searchQuery.isEmpty
+        ? _foods
+        : _foods
+              .where(
+                (f) =>
+                    f.name.toLowerCase().contains(_searchQuery.toLowerCase()),
+              )
+              .toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Menu Món Ăn'),
         actions: [
+          IconButton(
+            tooltip: 'Giỏ hàng',
+            icon: Stack(
+              children: [
+                const Icon(Icons.shopping_cart),
+                if (_cart.isNotEmpty)
+                  Positioned(
+                    right: 0,
+                    child: CircleAvatar(
+                      radius: 8,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        '${_cart.length}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CartScreen(
+                    cart: List.from(_cart),
+                    onRemove: (item) {
+                      setState(() => _cart.remove(item));
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Add sample data',
+            icon: const Icon(Icons.add_circle),
+            onPressed: () async {
+              try {
+                await _service.addSampleFoods();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sample foods added!')),
+                );
+                await Future.delayed(const Duration(milliseconds: 500));
+                _loadFoods();
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Error: $e')));
+              }
+            },
+          ),
           IconButton(
             tooltip: 'Simulate error',
             icon: Icon(_simulateError ? Icons.wifi_off : Icons.wifi),
@@ -103,12 +170,48 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           // Success
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: _foods.length,
-            itemBuilder: (context, index) {
-              return FoodCard(food: _foods[index]);
-            },
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Tìm kiếm...',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    setState(() => _searchQuery = v);
+                  },
+                ),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? const Center(child: Text('Không có kết quả'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final food = filtered[index];
+                          return FoodCard(
+                            food: food,
+                            onAddToCart: () {
+                              setState(() {
+                                _cart.add(food);
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${food.name} đã được thêm vào giỏ',
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),

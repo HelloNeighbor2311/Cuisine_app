@@ -2,6 +2,15 @@
 
 A new Flutter project.
 
+## Features implemented
+
+- Firebase core + Firestore integration
+- Sample food data with random images (Picsum) added via button
+- Loading / success / error states with retry
+- Search filter by name
+- Shopping cart: add items from list and view/remove in cart screen
+- Code organized into models/services/widgets/screens
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

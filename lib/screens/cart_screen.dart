@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/food.dart';
+import '../widgets/food_image.dart';
 
 class CartScreen extends StatefulWidget {
   final List<Food> cart;
@@ -12,6 +13,23 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   late List<Food> _localCart;
+
+  Map<String, _CartLine> get _groupedLines {
+    final lines = <String, _CartLine>{};
+    for (final food in _localCart) {
+      final key = food.id;
+      final existing = lines[key];
+      if (existing == null) {
+        lines[key] = _CartLine(food: food, quantity: 1);
+      } else {
+        lines[key] = _CartLine(
+          food: existing.food,
+          quantity: existing.quantity + 1,
+        );
+      }
+    }
+    return lines;
+  }
 
   @override
   void initState() {
@@ -29,10 +47,14 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.of(context).pop(_localCart);
-        return false;
+    final groupedLines = _groupedLines.values.toList();
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          Navigator.of(context).pop(_localCart);
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -46,60 +68,90 @@ class _CartScreenState extends State<CartScreen> {
         ),
         body: _localCart.isEmpty
             ? const Center(child: Text('Giỏ hàng trống'))
-            : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _localCart.length,
-                      itemBuilder: (ctx, i) {
-                        final food = _localCart[i];
-                        return ListTile(
-                          leading: food.imageUrl != null
-                              ? Image.network(
-                                  food.imageUrl!,
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.image_not_supported),
-                                )
-                              : const Icon(Icons.fastfood),
-                          title: Text(food.name),
-                          subtitle: Text(
-                            food.price != null
-                                ? '\$${food.price!.toStringAsFixed(2)}'
-                                : '',
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => _removeItem(food),
-                          ),
-                        );
-                      },
+            : ListView.builder(
+                padding: const EdgeInsets.only(bottom: 12),
+                itemCount: groupedLines.length,
+                itemBuilder: (ctx, i) {
+                  final line = groupedLines[i];
+                  final food = line.food;
+                  final lineTotal = (food.price ?? 0) * line.quantity;
+                  return ListTile(
+                    leading: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: FoodImage(
+                        imageUrl: food.imageUrl,
+                        dishName: food.name,
+                        fit: BoxFit.cover,
+                        iconSize: 24,
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    title: Text(food.name),
+                    subtitle: Text(
+                      food.price != null
+                          ? 'SL: ${line.quantity} • Đơn giá: \$${food.price!.toStringAsFixed(2)}'
+                          : 'SL: ${line.quantity}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Tổng cộng:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '\$${total.toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 18),
+                        Text('\$${lineTotal.toStringAsFixed(2)}'),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _removeItem(food),
                         ),
                       ],
                     ),
+                  );
+                },
+              ),
+        bottomNavigationBar: _localCart.isEmpty
+            ? null
+            : SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withValues(alpha: 0.6),
+                      ),
+                    ),
                   ),
-                ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tổng thanh toán',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '\$${total.toStringAsFixed(2)}',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_localCart.length} sản phẩm trong giỏ',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
               ),
       ),
     );
   }
+}
+
+class _CartLine {
+  final Food food;
+  final int quantity;
+
+  _CartLine({required this.food, required this.quantity});
 }

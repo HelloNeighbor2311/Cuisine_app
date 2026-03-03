@@ -3,9 +3,17 @@ import '../models/food.dart';
 import '../services/firestore_service.dart';
 import '../widgets/food_card.dart';
 import 'cart_screen.dart';
+import 'food_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isDarkMode;
+  final VoidCallback onToggleTheme;
+
+  const HomeScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.onToggleTheme,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -19,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   String? _error;
   bool _simulateError = false;
+  bool _didEnforceTop20 = false;
 
   @override
   void initState() {
@@ -33,11 +42,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
+      if (!_didEnforceTop20) {
+        final changedCount = await _service.enforceTop20Products();
+        debugPrint(
+          '[HomeScreen] Enforced top 20 products, changed: $changedCount',
+        );
+        _didEnforceTop20 = true;
+      }
+
       debugPrint('[HomeScreen] Fetching foods...');
       final list = await _service.fetchFoods(simulateError: _simulateError);
-      debugPrint('[HomeScreen] Fetched ${list.length} foods');
+      final top20List = list.take(20).toList();
+      debugPrint('[HomeScreen] Fetched ${top20List.length} foods');
       setState(() {
-        _foods = list;
+        _foods = top20List;
         _loading = false;
       });
     } catch (e) {
@@ -63,6 +81,13 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Menu Món Ăn'),
         actions: [
+          IconButton(
+            tooltip: widget.isDarkMode
+                ? 'Chuyển sang theme sáng'
+                : 'Chuyển sang theme tối',
+            icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: widget.onToggleTheme,
+          ),
           IconButton(
             tooltip: 'Giỏ hàng',
             icon: Stack(
@@ -100,10 +125,11 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Add sample data',
             icon: const Icon(Icons.add_circle),
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               try {
                 await _service.addSampleFoods();
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(content: Text('Sample foods added!')),
                   );
                 }
@@ -111,9 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _loadFoods();
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },
@@ -197,6 +221,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           final food = filtered[index];
                           return FoodCard(
                             food: food,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => FoodDetailScreen(food: food),
+                                ),
+                              );
+                            },
                             onAddToCart: () {
                               setState(() {
                                 _cart.add(food);

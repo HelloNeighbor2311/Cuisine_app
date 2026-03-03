@@ -86,16 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => CartScreen(
-                    cart: List.from(_cart),
-                    onRemove: (item) {
-                      setState(() => _cart.remove(item));
-                    },
-                  ),
-                ),
+              final updatedCart = await Navigator.of(context).push<List<Food>>(
+                MaterialPageRoute(builder: (_) => CartScreen(cart: _cart)),
               );
+              if (updatedCart != null && mounted) {
+                setState(() {
+                  _cart = updatedCart;
+                });
+              }
             },
           ),
           IconButton(
@@ -104,15 +102,19 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               try {
                 await _service.addSampleFoods();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sample foods added!')),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sample foods added!')),
+                  );
+                }
                 await Future.delayed(const Duration(milliseconds: 500));
                 _loadFoods();
               } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
               }
             },
           ),

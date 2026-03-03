@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
               .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Menu Món Ăn'),
+        title: const Text('TH3 - Nguyễn Viết Đạt - 2351060426'),
         actions: [
           IconButton(
             tooltip: widget.isDarkMode
